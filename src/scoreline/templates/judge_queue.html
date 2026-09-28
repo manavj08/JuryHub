@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m with context %}
+{% block title %}Your judging queue | Scoreline{% endblock %}
+{% block content %}
+{% for g in groups %}
+{% set left = g.rows|length - g.done %}
+<section style="margin-bottom:56px">
+  <div class="page-head">
+    <div>
+      <h1>{{ g.event.name }}</h1>
+      <p>
+        {% if not g.rows %}Nothing is assigned to you yet. The organizers will add projects to your queue.
+        {% elif left == 0 %}You've reviewed all {{ g.rows|length }} projects assigned to you. Thank you.
+        {% else %}<span class="hl">{{ plural(left, 'project') }} left</span> out of {{ g.rows|length }} assigned to you. Your scores stay private until the organizers publish results.{% endif %}
+      </p>
+    </div>
+    {% set nxt = g.rows|rejectattr('review_status', 'equalto', 'submitted')|first %}
+    {% if nxt %}<a class="btn" href="/judge/{{ g.event.id }}/{{ nxt.id }}">{% if g.done or nxt.review_status %}Continue judging{% else %}Start judging{% endif %}</a>{% endif %}
+  </div>
+  {% if g.rows %}
+  <div class="sheet">
+    <ul class="queue">
+      {% for r in g.rows %}
+      <li class="{{ 'done' if r.review_status == 'submitted' else ('draft' if r.review_status == 'draft' else '') }}">
+        <a href="/judge/{{ g.event.id }}/{{ r.id }}">
+          <span class="tick" aria-hidden="true"></span>
+          <span>
+            <h3>{{ r.title }}</h3>
+            <span class="muted small">{{ r.team_name }}{% if r.tagline %}, {{ r.tagline }}{% endif %}</span>
+          </span>
+          <span style="text-align:right">
+            {{ m.track(r.track_name, g.track_ix.get(r.track_id, 7)) }}<br>
+            <span class="small {{ 'faint' if r.review_status == 'submitted' else 'muted' }}">{% if r.review_status == 'submitted' %}Submitted{% elif r.review_status == 'draft' %}Draft saved{% else %}Not started{% endif %}</span>
+          </span>
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+</section>
+{% endfor %}
+{% endblock %}

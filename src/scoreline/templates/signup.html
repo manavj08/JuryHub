@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Create account | Scoreline{% endblock %}
+{% block content %}
+<div style="max-width:440px">
+  <h1 style="margin-bottom:24px">Create an account</h1>
+  {% if error %}<div class="errors" role="alert">{{ error }}</div>{% endif %}
+  <form method="post" action="/signup" class="sheet pad">
+    <input type="hidden" name="next" value="{{ next }}">
+    <label class="field"><span>Your name</span><input type="text" name="name" value="{{ values.name }}" autocomplete="name" required></label>
+    <label class="field"><span>Email</span><input type="email" name="email" value="{{ values.email }}" autocomplete="email" required></label>
+    <label class="field"><span>Password</span><input type="password" name="password" minlength="8" autocomplete="new-password" required><span class="hint">At least 8 characters.</span></label>
+    <button class="btn" type="submit" style="width:100%">Create account</button>
+  </form>
+  <p class="muted" style="margin-top:18px">Already have one? <a href="/login?next={{ next|urlencode }}">Sign in</a>.</p>
+</div>
+{% endblock %}

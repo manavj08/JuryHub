@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m with context %}
+{% block title %}Scoring {{ p.title }} | Scoreline{% endblock %}
+{% block content %}
+{% set ring = "M31 5.5C46 4 56.5 14 55.5 29c-1 15.5-13 25-27.5 24.5C13.5 53 4 42.5 4.5 29 5 16 15 6.5 30 6.5c6.5 0 12 2.5 15.5 6" %}
+{% set wsum = criteria|sum(attribute='weight') %}
+{% set locked = review and review.status == 'submitted' %}
+<div class="crumb"><a href="/judge">Your queue</a> / {{ event.name }}</div>
+<div class="sheet-progress" style="margin-bottom:22px">
+  <span class="num">Project {{ position }} of {{ count }}</span>
+  <div class="meter" aria-hidden="true"><i style="width:{{ (100 * done / count)|round }}%"></i></div>
+  <span class="num">{{ done }} submitted</span>
+</div>
+
+<div class="sheet-grid">
+  <article>
+    <div style="margin-bottom:10px">{{ m.track(p.track_name, track_ix.get(p.track_id, 7)) }}</div>
+    <h1>{{ p.title }}</h1>
+    {% if p.tagline %}<p class="muted" style="font-size:1.2rem;margin-top:10px">{{ p.tagline }}</p>{% endif %}
+    <p class="small muted">By {{ p.team_name }}. Submitted {{ p.submitted_at|dt }}.</p>
+
+    <div class="sheet pad" style="margin:24px 0">
+      <ul class="links">
+        <li><span class="muted">Code</span>{% if p.repo_url %}<a href="{{ p.repo_url }}" target="_blank" rel="noopener nofollow">{{ p.repo_url|replace('https://', '') }}</a>{% else %}<span class="faint">None given</span>{% endif %}</li>
+        <li><span class="muted">Demo video</span>{% if p.demo_video_url %}<a href="{{ p.demo_video_url }}" target="_blank" rel="noopener nofollow">Watch the demo</a>{% else %}<span class="faint">None given</span>{% endif %}</li>
+        {% if p.live_url %}<li><span class="muted">Live</span><a href="{{ p.live_url }}" target="_blank" rel="noopener nofollow">{{ p.live_url|replace('https://', '') }}</a></li>{% endif %}
+      </ul>
+    </div>
+
+    {% if p.description %}<div class="prose">{{ p.description|paragraphs }}</div>{% else %}<p class="faint">The team didn't write a longer description. The repository and demo are the whole submission.</p>{% endif %}
+    {% if images %}<div class="shots" style="margin-top:20px">{% for i in images %}<a href="{{ i.path }}" target="_blank"><img src="{{ i.path }}" alt="Screenshot {{ loop.index }}"></a>{% endfor %}</div>{% endif %}
+    {% for a in answers %}<h3 style="margin:26px 0 6px">{{ a.prompt }}</h3><div class="prose">{{ a.body|paragraphs }}</div>{% endfor %}
+    {% if tags %}<div class="tags" style="margin-top:22px">{% for t in tags %}<span class="tag">{{ t }}</span>{% endfor %}</div>{% endif %}
+
+    {% if not locked %}
+    <details style="margin-top:40px">
+      <summary class="muted" style="cursor:pointer">I know this team, or can't judge this fairly</summary>
+      <form method="post" action="/judge/{{ event.id }}/{{ p.id }}/conflict" class="sheet pad" style="margin-top:12px" data-confirm="Remove this project from your queue and record a conflict of interest?">
+        {{ m.csrf_field() }}
+        <label class="field"><span>What's the conflict?</span><input type="text" name="reason" maxlength="300" placeholder="For example: I mentor one of the team members"></label>
+        <button class="btn danger small" type="submit">Declare conflict and skip</button>
+        <p class="faint small" style="margin:10px 0 0">The organizers see this in the audit trail. The project goes to another judge.</p>
+      </form>
+    </details>
+    {% endif %}
+  </article>
+
+  <form class="sheet scorecard" method="post" action="/judge/{{ event.id }}/{{ p.id }}" data-scoresheet>
+    {{ m.csrf_field() }}
+    <input type="hidden" name="next_id" value="{{ next_id or '' }}">
+    <h2>Your scores</h2>
+    {% if locked %}<div class="locked" style="margin-top:12px">Submitted {{ review.submitted_at|dt }}. Ask an organizer if you need to change it.</div>{% endif %}
+    {% if errors %}<div class="errors" role="alert" style="margin:12px 0 0">{% for e in errors %}<div>{{ e }}</div>{% endfor %}</div>{% endif %}
+    <fieldset {% if locked %}disabled{% endif %} style="border:0;padding:0;margin:0">
+    {% for c in criteria %}
+    <div class="crit" data-crit data-weight="{{ c.weight }}" data-min="{{ c.min_score }}" data-max="{{ c.max_score }}" role="radiogroup" aria-labelledby="cl-{{ c.key }}">
+      <div class="crit-head"><b id="cl-{{ c.key }}">{{ c.name }}</b><span class="w num">{{ (100 * c.weight / wsum)|round|int }}% of total</span></div>
+      {% if c.guidance %}<p>{{ c.guidance }}</p>{% endif %}
+      <div class="picks">
+        {% for v in range(c.min_score, c.max_score + 1) %}
+        <label class="pick">
+          <input type="radio" name="c_{{ c.key }}" value="{{ v }}" {% if values.get(c.key) == v %}checked{% endif %} aria-label="{{ c.name }} {{ v }}">
+          <span class="n num">{{ v }}</span>
+          <svg viewBox="0 0 60 58" preserveAspectRatio="none" aria-hidden="true"><path d="{{ ring }}"/></svg>
+        </label>
+        {% endfor %}
+      </div>
+      <div class="scale-ends"><span>Weak</span><span>Excellent</span></div>
+    </div>
+    {% endfor %}
+
+    <div class="total">
+      <span><b>Weighted score</b><br><span class="faint small" data-total-note>out of 5</span></span>
+      <span class="big num {% if not values %}pending{% endif %}" data-total>{% if values %}&ndash;{% else %}&ndash;{% endif %}</span>
+    </div>
+    <label class="field"><span>Notes for the organizers <span class="faint" style="font-weight:400">(optional, teams never see these)</span></span><textarea name="comment" maxlength="4000" style="min-height:80px">{{ comment }}</textarea></label>
+    {% if not locked %}
+    <div class="actions">
+      <button class="btn" type="submit" name="action" value="submit" style="flex:1">Submit review{% if next_id %} and go to next{% endif %}</button>
+      <button class="btn quiet" type="submit" name="action" value="draft">Save draft</button>
+    </div>
+    <p class="keys"><kbd>1</kbd>&ndash;<kbd>5</kbd> scores the highlighted criterion. <kbd>J</kbd> and <kbd>K</kbd> move between criteria.</p>
+    {% elif next_id %}
+    <a class="btn" href="/judge/{{ event.id }}/{{ next_id }}" style="width:100%">Next project</a>
+    {% endif %}
+    </fieldset>
+  </form>
+</div>
+{% endblock %}

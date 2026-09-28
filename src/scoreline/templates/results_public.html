@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m with context %}
+{% block title %}Results | {{ event.name }}{% endblock %}
+{% block content %}
+{% set rows = table.project_rows %}
+<div class="crumb"><a href="/events/{{ event.id }}">{{ event.name }}</a></div>
+<div class="page-head">
+  <div><h1>Results</h1><p>Published {{ event.results_published_at|dt }}. Scores are the average a typical judge would have given, after adjusting for each judge's generosity. <a href="/api/events/{{ event.id }}/results">Download as JSON</a>.</p></div>
+</div>
+{% set top = table.projects[:3] %}
+<div class="podium">
+  {% for r in top %}
+  <div class="sheet place">
+    <div class="pos num">{{ r.rank }}</div>
+    <h3 style="margin-top:10px"><a href="/projects/{{ r.project_id }}">{{ rows[r.project_id].title }}</a></h3>
+    <div class="muted small">{{ rows[r.project_id].team_name }}</div>
+    <div class="num" style="margin-top:10px;font-weight:700">{{ '%.2f'|format(r.normalized) }}</div>
+    {% if prizes[loop.index0] %}<div class="small muted">{{ prizes[loop.index0].name }}{% if prizes[loop.index0].reward %}, {{ prizes[loop.index0].reward }}{% endif %}</div>{% endif %}
+  </div>
+  {% endfor %}
+</div>
+<div class="table-wrap">
+<table class="data">
+  <thead><tr><th>Rank</th><th>Project</th><th>Track</th><th class="r">Place in track</th><th class="r">Reviews</th><th class="r">Score</th></tr></thead>
+  <tbody>
+  {% for r in table.projects %}
+  <tr>
+    <td class="rank num">{{ r.rank }}</td>
+    <td><a href="/projects/{{ r.project_id }}">{{ rows[r.project_id].title }}</a> <span class="faint small">{{ rows[r.project_id].team_name }}</span></td>
+    <td>{{ m.track(rows[r.project_id].track_name, track_ix.get(rows[r.project_id].track_id, 7)) }}</td>
+    <td class="r num">{{ table.track_rank[r.project_id] }}</td>
+    <td class="r num">{{ r.n }}</td>
+    <td class="r num"><b>{{ '%.2f'|format(r.normalized) }}</b></td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

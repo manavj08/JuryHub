@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Sign in | Scoreline{% endblock %}
+{% block content %}
+<div style="max-width:420px">
+  <h1 style="margin-bottom:24px">Sign in</h1>
+  {% if error %}<div class="errors" role="alert">{{ error }}</div>{% endif %}
+  <form method="post" action="/login" class="sheet pad">
+    <input type="hidden" name="next" value="{{ next }}">
+    <label class="field"><span>Email</span><input type="email" name="email" value="{{ email }}" autocomplete="username" required autofocus></label>
+    <label class="field"><span>Password</span><input type="password" name="password" autocomplete="current-password" required></label>
+    <button class="btn" type="submit" style="width:100%">Sign in</button>
+  </form>
+  <p class="muted" style="margin-top:18px">New here? <a href="/signup?next={{ next|urlencode }}">Create an account</a>.</p>
+  <p class="faint small">Running the demo? Every seeded account uses the password printed when the portal started.</p>
+</div>
+{% endblock %}

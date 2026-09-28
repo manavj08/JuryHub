@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Results | {{ event.name }}{% endblock %}
+{% block content %}
+<div class="error-page">
+  <div class="crumb"><a href="/events/{{ event.id }}">{{ event.name }}</a></div>
+  <h1>Results are not published yet</h1>
+  <p class="muted" style="margin-top:14px;font-size:1.1rem">Scores stay hidden from everyone except the organizers until they publish. Check back after judging closes.</p>
+  {% if 'organizer' in roles %}<a class="btn" href="/manage/{{ event.id }}/results">Preview results in the console</a>{% endif %}
+</div>
+{% endblock %}

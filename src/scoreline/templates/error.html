@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}{{ status }} | Scoreline{% endblock %}
+{% block content %}
+<div class="error-page">
+  <div class="code num">{{ status }}</div>
+  <h1 style="font-size:1.8rem;margin-top:14px">{% if status == 403 %}You don't have access to this{% elif status == 404 %}Not found{% elif status == 429 %}Slow down{% else %}That didn't work{% endif %}</h1>
+  <p class="muted" style="margin-top:12px;font-size:1.1rem">{{ message }}</p>
+  <div class="actions" style="margin-top:20px"><a class="btn" href="/">Go to events</a>{% if not user %}<a class="btn ghost" href="/login?next={{ request.url.path|urlencode }}">Sign in</a>{% endif %}</div>
+</div>
+{% endblock %}

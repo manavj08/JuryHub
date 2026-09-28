@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m with context %}
+{% block title %}Join {{ team.name }} | Scoreline{% endblock %}
+{% block content %}
+<div style="max-width:520px">
+  <div class="crumb"><a href="/events/{{ event.id }}">{{ event.name }}</a></div>
+  <h1>Join {{ team.name }}</h1>
+  <p class="muted" style="font-size:1.1rem;margin:12px 0 22px">{{ plural(members|length, 'person', 'people') }} on this team so far: {{ members|map(attribute='name')|join(', ') }}.</p>
+  {% if not user %}
+    <div class="actions"><a class="btn" href="/signup?next=/t/{{ code }}">Create account to join</a><a class="btn ghost" href="/login?next=/t/{{ code }}">Sign in</a></div>
+  {% elif current and current.id == team.id %}
+    <div class="note">You're already on this team. <a href="/events/{{ event.id }}/team">Go to your team</a>.</div>
+  {% elif current %}
+    <div class="note">You're on {{ current.name }} for this event. Leave it first if you want to switch.</div>
+  {% elif 'judge' in roles %}
+    <div class="note">You're judging {{ event.name }}, so you can't join a team in it.</div>
+  {% elif phase not in ['open', 'upcoming'] %}
+    <div class="note">Submissions are closed, so teams are locked.</div>
+  {% else %}
+    <form method="post">{{ m.csrf_field() }}<button class="btn" type="submit">Join {{ team.name }}</button></form>
+  {% endif %}
+</div>
+{% endblock %}

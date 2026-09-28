@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m with context %}
+{% block title %}Audit trail | {{ event.name }}{% endblock %}
+{% block content %}
+{{ m.console_nav(event, section) }}
+<div class="chain {{ 'ok' if chain.ok else 'bad' }}">
+  {% if chain.ok %}<span><b>The record is intact.</b> All {{ chain.count }} entries check out against their hashes, so none has been edited or deleted since it was written.</span>
+  {% else %}<span><b>The record has been altered.</b> Entry {{ chain.broken_at }} does not match the hash that the entry before it committed to. Everything after it can't be trusted.</span>{% endif %}
+</div>
+{% if head %}<p class="small muted" style="margin:-8px 0 22px">Latest hash, entry {{ head.seq }}: <code style="word-break:break-all">{{ head.hash }}</code>. Post it somewhere public when you publish results, and anyone can later check that nothing before it was rewritten.</p>{% endif %}
+<div class="result-bar">
+  <span class="num">{{ plural(total, 'entry', 'entries') }}{% if action %} about {{ action }}{% endif %}</span>
+  <form method="get" data-autosubmit><label class="small">Show
+    <select name="action"><option value="">Everything</option>{% for k in kinds %}<option value="{{ k }}" {% if k == action %}selected{% endif %}>{{ k|replace('_', ' ')|capitalize }}</option>{% endfor %}</select></label>
+    <noscript><button class="btn small quiet">Filter</button></noscript>
+  </form>
+</div>
+<div class="sheet pad">
+  {% for a in rows %}
+  <div class="audit-row" {% if loop.first %}style="border-top:0"{% endif %}>
+    <time datetime="{{ a.at }}">{{ a.at|dt }}</time>
+    <div>{{ a.summary }}
+      {% if a.detail and a.detail != '{}' %}<details class="raw"><summary>Details</summary><pre>{{ a.detail }}</pre></details>{% endif %}
+    </div>
+    <code title="Entry {{ a.seq }}, hash {{ a.hash }}">#{{ a.seq }}</code>
+  </div>
+  {% else %}
+  <p class="muted">Nothing recorded yet.</p>
+  {% endfor %}
+</div>
+{% if total > 100 %}
+<nav class="pager">{% if page > 1 %}<a class="btn quiet small" href="?action={{ action }}&page={{ page - 1 }}">Newer</a>{% endif %}{% if page * 100 < total %}<a class="btn quiet small" href="?action={{ action }}&page={{ page + 1 }}">Older</a>{% endif %}</nav>
+{% endif %}
+{% endblock %}

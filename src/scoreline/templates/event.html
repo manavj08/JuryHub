@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m with context %}
+{% block title %}{{ event.name }} | Scoreline{% endblock %}
+{% block content %}
+<div class="split">
+  <div>
+    <h1>{{ event.name }}</h1>
+    {% if event.tagline %}<p class="muted" style="font-size:1.2rem;margin-top:12px;max-width:56ch">{{ event.tagline }}</p>{% endif %}
+    {{ m.phase_rail(event, phase) }}
+    {% if event.description %}<div class="prose" style="margin-top:30px">{{ event.description|paragraphs }}</div>{% endif %}
+
+    <h2 style="margin:40px 0 12px">Tracks</h2>
+    <ul class="item-list">
+      {% for t in tracks %}
+      <li><a class="track tc{{ track_ix[t.id] }}" style="font-size:1rem;color:var(--ink)" href="/projects?event={{ event.id }}&track={{ t.id }}">{{ t.name }}</a>
+          <span class="muted small num">{{ plural(track_counts.get(t.id, 0), 'project') }}</span></li>
+      {% endfor %}
+    </ul>
+
+    <h2 style="margin:40px 0 6px">How projects are judged</h2>
+    <p class="muted" style="max-width:60ch">Each project is scored by at least {{ event.reviews_per_project }} judges on the criteria below. Judges never see each other's scores. Before ranking, scores are adjusted for how generous or strict each judge was, so the luck of who reviewed you matters less.</p>
+    <table class="data" style="max-width:640px">
+      <thead><tr><th>Criterion</th><th>What judges look for</th><th class="r">Weight</th></tr></thead>
+      <tbody>
+      {% set wsum = criteria|sum(attribute='weight') %}
+      {% for c in criteria %}
+      <tr><td><b>{{ c.name }}</b></td><td class="muted">{{ c.guidance }}</td><td class="r num">{{ (100 * c.weight / wsum)|round|int }}%</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+
+    {% if recent %}
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin:44px 0 16px">
+      <h2>Latest submissions</h2><a href="/projects?event={{ event.id }}&sort=newest">All {{ total }} projects</a>
+    </div>
+    <div class="entries">
+      {% for p in recent %}
+      <a class="entry" href="/projects/{{ p.id }}">
+        {{ m.cover(p, track_ix) }}
+        <h3>{{ p.title }}</h3>
+        <p>{{ p.tagline }}</p>
+        <div class="by"><span>{{ p.team_name }}</span>{{ m.track(p.track_name, track_ix.get(p.track_id, 7)) }}</div>
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+
+  <aside class="stack">
+    <div class="sheet pad">
+      {% if phase == 'open' %}
+        {% if 'judge' in roles %}
+          <h3>You are judging this event</h3>
+          <p class="muted" style="margin-top:6px">Judges cannot enter projects in an event they judge.</p>
+          <a class="btn" href="/judge">Open your queue</a>
+        {% elif team %}
+          <h3>You're on {{ team.name }}</h3>
+          <p class="muted" style="margin-top:6px">Edit your project until <span class="deadline">{{ event.submissions_close_at|dt }}</span>.</p>
+          <div class="actions"><a class="btn" href="/events/{{ event.id }}/project">Edit your project</a><a class="btn ghost" href="/events/{{ event.id }}/team">Team</a></div>
+        {% elif user %}
+          <h3>Enter this event</h3>
+          <p class="muted" style="margin-top:6px">Start a team, then invite teammates with a link. Up to {{ event.max_team_size }} people per team.</p>
+          <a class="btn" href="/events/{{ event.id }}/team">Start or join a team</a>
+        {% else %}
+          <h3>Enter this event</h3>
+          <p class="muted" style="margin-top:6px">Create an account to start a team and submit a project.</p>
+          <div class="actions"><a class="btn" href="/signup?next=/events/{{ event.id }}/team">Create account</a><a class="btn ghost" href="/login?next=/events/{{ event.id }}">Sign in</a></div>
+        {% endif %}
+      {% elif phase == 'upcoming' %}
+        <h3>Submissions open {{ event.submissions_open_at|dt }}</h3>
+        <p class="muted" style="margin-top:6px">You can form a team now.</p>
+        {% if user %}<a class="btn" href="/events/{{ event.id }}/team">Start or join a team</a>{% endif %}
+      {% elif phase == 'judging' %}
+        <h3>Submissions are closed</h3>
+        <p class="muted" style="margin-top:6px">Judges are reviewing projects. Results appear here when the organizers publish them.</p>
+        {% if 'organizer' in roles %}<a class="btn" href="/manage/{{ event.id }}">Open the console</a>{% elif 'judge' in roles %}<a class="btn" href="/judge">Open your queue</a>{% endif %}
+      {% else %}
+        <h3>Results are out</h3>
+        <p class="muted" style="margin-top:6px">Published {{ event.results_published_at|dt }}.</p>
+        <a class="btn" href="/events/{{ event.id }}/results">See the results</a>
+      {% endif %}
+    </div>
+
+    {% if prizes %}
+    <div class="sheet pad">
+      <h3 style="margin-bottom:8px">Prizes</h3>
+      <ul class="item-list">
+        {% for p in prizes %}<li><span>{{ p.name }}{% if p.track_name %} <span class="faint small">in {{ p.track_name }}</span>{% endif %}</span><b class="num">{{ p.reward }}</b></li>{% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    <div class="sheet pad small">
+      <h3 style="margin-bottom:8px">Dates</h3>
+      <ul class="item-list">
+        <li><span class="muted">Submissions open</span><span>{{ event.submissions_open_at|dt }}</span></li>
+        <li><span class="muted">Submissions close</span><span class="deadline">{{ event.submissions_close_at|dt }}</span></li>
+      </ul>
+    </div>
+  </aside>
+</div>
+{% endblock %}

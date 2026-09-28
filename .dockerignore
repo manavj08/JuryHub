@@ -1,0 +1,7 @@
+.git
+**/__pycache__
+**/*.pyc
+data/scoreline.db*
+data/uploads
+tests
+.pytest_cache

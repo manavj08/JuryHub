@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Accept invitation | Scoreline{% endblock %}
+{% block content %}
+<div style="max-width:460px">
+  <h1 style="margin-bottom:12px">Welcome, {{ inv.name }}</h1>
+  <p class="muted" style="font-size:1.1rem">{% if inv.event_name %}You've been invited to judge {{ inv.event_name }}.{% else %}Set a password to finish setting up your account.{% endif %} Choose a password for {{ inv.email }} to get started.</p>
+  {% if error %}<div class="errors" role="alert">{{ error }}</div>{% endif %}
+  <form method="post" class="sheet pad" style="margin-top:20px">
+    <label class="field"><span>Password</span><input type="password" name="password" minlength="8" autocomplete="new-password" required autofocus><span class="hint">At least 8 characters. This link works once.</span></label>
+    <button class="btn" type="submit" style="width:100%">Set password and continue</button>
+  </form>
+</div>
+{% endblock %}

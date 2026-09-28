@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m with context %}
+{% block title %}{{ event.name }} console | Scoreline{% endblock %}
+{% block content %}
+{{ m.console_nav(event, section) }}
+{% set t = prog.totals %}
+{% set idle = prog.judges|selectattr('assigned')|selectattr('done', 'equalto', 0)|selectattr('drafts', 'equalto', 0)|list %}
+<div class="kpis">
+  <div><b class="num">{{ t.projects }}</b><span>projects submitted{% if t.drafts %}, {{ t.drafts }} still drafts{% endif %}</span></div>
+  <div><b class="num">{{ t.done }}<span class="faint" style="font-size:1.2rem"> / {{ t.assigned }}</span></b><span>reviews finished</span></div>
+  <div><b class="num">{% if idle %}<span class="hl">{{ idle|length }}</span>{% else %}0{% endif %}</b><span>judges who haven't started</span></div>
+  <div><b class="num">{{ t.teams }}</b><span>teams</span></div>
+</div>
+
+<div class="split">
+  <div class="stack">
+    <section class="sheet pad">
+      <h2 style="font-size:1.15rem;margin-bottom:4px">Before you publish</h2>
+      {% if anomalies %}
+      <ul class="alert-list">
+        {% for a in anomalies %}<li class="{{ a.kind }}">{{ a.text }}{% if a.kind == 'duplicate' %} <a href="/manage/{{ event.id }}/results#duplicates">Resolve</a>{% elif a.kind == 'coverage' %} <a href="/manage/{{ event.id }}/judges">Top up assignments</a>{% endif %}</li>{% endfor %}
+      </ul>
+      {% else %}
+      <p class="muted" style="margin:6px 0 0">Nothing needs your attention right now.</p>
+      {% endif %}
+    </section>
+
+    <section class="sheet pad">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+        <h2 style="font-size:1.15rem">Judges</h2><a class="small" href="/manage/{{ event.id }}/judges">Manage judges</a>
+      </div>
+      <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>Judge</th><th>Progress</th><th class="r">Done</th><th>Last active</th></tr></thead>
+        <tbody>
+        {% for j in prog.judges %}
+        {% set state = 'done' if j.assigned and j.done == j.assigned else ('idle' if j.done == 0 and j.drafts == 0 else 'going') %}
+        <tr>
+          <td>{{ j.name }}<br><span class="judge-state {{ state }}">{% if not j.assigned %}Nothing assigned{% elif state == 'done' %}Finished{% elif state == 'idle' %}Not started{% else %}In progress{% endif %}</span></td>
+          <td style="width:30%"><div class="meter"><i style="width:{{ (100 * j.done / j.assigned)|round if j.assigned else 0 }}%"></i></div></td>
+          <td class="r num">{{ j.done }}/{{ j.assigned }}</td>
+          <td class="small muted">{% if j.last_active %}{{ j.last_active|dt }}{% elif j.done %}Imported{% else %}Never{% endif %}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+    </section>
+  </div>
+
+  <aside class="stack">
+    <section class="sheet pad">
+      <h3 style="margin-bottom:12px">By track</h3>
+      {% for tr in prog.tracks %}
+      <div style="margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;font-size:0.92rem"><span class="track tc{{ loop.index0 % 8 }}" style="color:var(--ink)">{{ tr.name }}</span><span class="num muted">{{ tr.done }}/{{ tr.assigned }}</span></div>
+        <div class="meter tc{{ loop.index0 % 8 }}" style="margin-top:6px"><i style="width:{{ (100 * tr.done / tr.assigned)|round if tr.assigned else 0 }}%"></i></div>
+      </div>
+      {% endfor %}
+    </section>
+    <section class="sheet pad">
+      <h3 style="margin-bottom:6px">Fewest reviews</h3>
+      <ul class="item-list small">
+        {% for c in coverage %}<li><a href="/projects/{{ c.id }}">{{ c.title }}</a><span class="num {% if c.done < event.reviews_per_project %}deadline soon{% else %}muted{% endif %}">{{ c.done }} of {{ c.assigned }}</span></li>{% endfor %}
+      </ul>
+    </section>
+    <section class="sheet pad">
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><h3>Recent activity</h3><a class="small" href="/manage/{{ event.id }}/audit">Full trail</a></div>
+      <ul class="feed">{% for a in recent %}<li><time>{{ a.at|dt }}</time>{{ a.summary }}</li>{% endfor %}</ul>
+    </section>
+  </aside>
+</div>
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m with context %}
+{% block title %}Your team | {{ event.name }}{% endblock %}
+{% block content %}
+<div class="crumb"><a href="/events/{{ event.id }}">{{ event.name }}</a></div>
+{% if not team %}
+<div style="max-width:560px">
+  <h1>Start a team</h1>
+  <p class="muted" style="font-size:1.1rem;margin:12px 0 24px">You'll get an invite link to send to up to {{ event.max_team_size - 1 }} teammates. If someone already started your team, ask them for their link instead.</p>
+  {% if phase in ['open', 'upcoming'] %}
+  <form method="post" action="/events/{{ event.id }}/team" class="sheet pad">
+    {{ m.csrf_field() }}
+    <label class="field"><span>Team name</span><input type="text" name="name" maxlength="80" required autofocus><span class="hint">Other teams can have the same name; the organizers see your team by its members.</span></label>
+    <button class="btn" type="submit">Create team</button>
+  </form>
+  {% else %}
+  <div class="note">Submissions are closed, so new teams can't be formed.</div>
+  {% endif %}
+</div>
+{% else %}
+<div class="page-head">
+  <div><h1>{{ team.name }}</h1><p>{{ plural(members|length, 'member') }} of {{ event.max_team_size }}. {% if phase == 'open' %}Submissions close <span class="deadline">{{ event.submissions_close_at|dt }}</span>.{% endif %}</p></div>
+  {% if phase == 'open' %}<a class="btn" href="/events/{{ event.id }}/project">{% if project %}Edit your project{% else %}Start your project{% endif %}</a>{% endif %}
+</div>
+<div class="split">
+  <div class="stack">
+    <div class="sheet pad">
+      <h2 style="font-size:1.15rem;margin-bottom:6px">Invite teammates</h2>
+      <p class="muted">Anyone with this link can join until the team is full or submissions close.</p>
+      <div class="invite-box">
+        <label class="visually-hidden" for="invite">Invite link</label>
+        <input id="invite" type="text" readonly value="{{ request.base_url }}t/{{ team.invite_code }}">
+        <button class="btn quiet" type="button" data-copy="#invite">Copy link</button>
+      </div>
+      <form method="post" action="/events/{{ event.id }}/team/rotate" style="margin-top:10px">
+        {{ m.csrf_field() }}<button class="linkish small" type="submit">Replace this link (the old one stops working)</button>
+      </form>
+    </div>
+    <div class="sheet pad">
+      <h2 style="font-size:1.15rem;margin-bottom:4px">Members</h2>
+      <ul class="member-list">
+        {% for mbr in members %}<li><span>{{ mbr.name }}{% if mbr.id == user.id %} <span class="faint">(you)</span>{% endif %}</span><span class="faint small">joined {{ mbr.joined_at|date }}</span></li>{% endfor %}
+      </ul>
+    </div>
+  </div>
+  <aside class="stack">
+    <div class="sheet pad">
+      <h3>Project</h3>
+      {% if project %}
+      <p style="margin:8px 0 4px"><b>{{ project.title }}</b></p>
+      <span class="status {{ project.status }}">{{ 'Submitted' if project.status == 'submitted' else 'Draft' }}</span>
+      <p class="muted small" style="margin-top:10px">Last saved {{ project.updated_at|dt }}</p>
+      {% else %}
+      <p class="muted" style="margin-top:6px">Nothing saved yet.</p>
+      {% endif %}
+    </div>
+    {% if phase in ['open', 'upcoming'] %}
+    <form method="post" action="/events/{{ event.id }}/team/leave" data-confirm="Leave {{ team.name }}? You'll need a new invite link to rejoin.">
+      {{ m.csrf_field() }}<button class="btn danger small" type="submit">Leave team</button>
+    </form>
+    {% endif %}
+  </aside>
+</div>
+{% endif %}
+{% endblock %}

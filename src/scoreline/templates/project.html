@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m with context %}
+{% block title %}{{ p.title }} | Scoreline{% endblock %}
+{% block content %}
+<div class="crumb"><a href="/projects?event={{ event.id }}">{{ event.name }}</a></div>
+{% if p.status != 'submitted' or p.duplicate_of %}
+<div class="note" style="margin-bottom:22px">
+  {% if p.duplicate_of %}This entry is marked as a duplicate of <a href="/projects/{{ p.duplicate_of }}">{{ p.duplicate_of }}</a>. Only organizers and the team can see it.
+  {% else %}This project is a draft. Only the team and organizers can see it.{% endif %}
+</div>
+{% endif %}
+<div class="project-head">
+  {{ m.cover(p, track_ix) }}
+  <div>
+    <div style="margin-bottom:10px">{{ m.track(p.track_name, track_ix.get(p.track_id, 7)) }}</div>
+    <h1>{{ p.title }}</h1>
+    {% if p.tagline %}<p class="tagline">{{ p.tagline }}</p>{% endif %}
+  </div>
+</div>
+
+<div class="split">
+  <div class="stack">
+    {% if p.description %}<div class="prose">{{ p.description|paragraphs }}</div>
+    {% else %}<p class="muted">The team did not write a longer description.</p>{% endif %}
+
+    {% if images %}
+    <div class="shots">{% for i in images %}<a href="{{ i.path }}"><img src="{{ i.path }}" alt="Screenshot {{ loop.index }} of {{ p.title }}" loading="lazy"></a>{% endfor %}</div>
+    {% endif %}
+
+    {% for a in answers %}
+    <div><h3 style="margin-bottom:6px">{{ a.prompt }}</h3><div class="prose">{{ a.body|paragraphs }}</div></div>
+    {% endfor %}
+
+    <section id="comments" style="margin-top:44px">
+      <h2 style="margin-bottom:6px">Comments</h2>
+      {% for c in comments %}
+      <div class="comment">
+        <b>{{ c.name }}</b> <span class="faint small">{{ c.created_at|dt }}</span>
+        <div style="margin-top:4px">{{ c.body }}</div>
+        {% if 'organizer' in roles %}
+        <form method="post" action="/comments/{{ c.id }}/hide" style="margin-top:4px">{{ m.csrf_field() }}<button class="linkish small" type="submit">Hide this comment</button></form>
+        {% endif %}
+      </div>
+      {% else %}
+      <p class="muted">No comments yet.</p>
+      {% endfor %}
+      {% if user %}
+      <form method="post" action="/projects/{{ p.id }}/comments" style="margin-top:18px">
+        {{ m.csrf_field() }}
+        <label class="field"><span>Add a comment</span><textarea name="body" maxlength="2000" style="min-height:90px" required></textarea></label>
+        <button class="btn" type="submit">Post comment</button>
+      </form>
+      {% else %}
+      <p style="margin-top:14px"><a href="/login?next=/projects/{{ p.id }}">Sign in</a> to comment.</p>
+      {% endif %}
+    </section>
+  </div>
+
+  <aside class="stack">
+    <div class="sheet pad">
+      <ul class="links">
+        {% if p.repo_url %}<li><span class="muted">Code</span><a href="{{ p.repo_url }}" rel="noopener nofollow">{{ p.repo_url|replace('https://', '') }}</a></li>{% endif %}
+        {% if p.demo_video_url %}<li><span class="muted">Demo video</span><a href="{{ p.demo_video_url }}" rel="noopener nofollow">Watch</a></li>{% endif %}
+        {% if p.live_url %}<li><span class="muted">Live</span><a href="{{ p.live_url }}" rel="noopener nofollow">{{ p.live_url|replace('https://', '') }}</a></li>{% endif %}
+        <li><span class="muted">Submitted</span><span>{{ p.submitted_at|dt or 'Not yet' }}</span></li>
+      </ul>
+    </div>
+    <div class="sheet pad">
+      <h3 style="margin-bottom:4px">{{ p.team_name }}</h3>
+      <ul class="member-list">{% for mbr in members %}<li>{{ mbr.name }}</li>{% endfor %}</ul>
+    </div>
+    {% if tags %}<div class="tags">{% for t in tags %}<a class="tag" href="/projects?tag={{ t|urlencode }}">{{ t }}</a>{% endfor %}</div>{% endif %}
+  </aside>
+</div>
+{% endblock %}

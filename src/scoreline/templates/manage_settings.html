@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m with context %}
+{% block title %}Settings | {{ event.name }}{% endblock %}
+{% block content %}
+{{ m.console_nav(event, section) }}
+{% set wsum = criteria|sum(attribute='weight') %}
+<div class="split">
+  <div class="stack">
+    <form method="post" action="/manage/{{ event.id }}/settings/event" class="sheet pad">
+      {{ m.csrf_field() }}
+      <h2 style="font-size:1.15rem;margin-bottom:16px">Event details</h2>
+      <label class="field"><span>Name</span><input type="text" name="name" value="{{ event.name }}" required></label>
+      <label class="field"><span>Tagline</span><input type="text" name="tagline" value="{{ event.tagline }}"></label>
+      <label class="field"><span>Description</span><textarea name="description">{{ event.description }}</textarea></label>
+      <div class="row2">
+        <label class="field"><span>Submissions open (UTC)</span><input type="datetime-local" name="opens" value="{{ event.submissions_open_at[:16] }}"></label>
+        <label class="field"><span>Submissions close (UTC)</span><input type="datetime-local" name="closes" value="{{ event.submissions_close_at[:16] }}"><span class="hint">Enforced by the server and the database. Late edits are refused.</span></label>
+      </div>
+      <div class="row2">
+        <label class="field"><span>Largest team</span><input type="number" name="max_team_size" min="1" max="20" value="{{ event.max_team_size }}"></label>
+        <label class="field"><span>Judges per project</span><input type="number" name="reviews_per_project" min="1" max="20" value="{{ event.reviews_per_project }}"><span class="hint">Auto-assignment tops every project up to this.</span></label>
+      </div>
+      <label class="field"><span>Bias shrinkage</span><input type="number" name="bias_shrinkage" min="0" max="50" step="0.5" value="{{ event.bias_shrinkage }}" style="max-width:160px"><span class="hint">How many reviews a judge needs before we trust their generosity estimate. 2 is a good default; 0 turns shrinkage off. See JUDGING.md.</span></label>
+      <div class="checks" style="margin-bottom:18px"><label><input type="checkbox" name="is_public" value="1" {% if event.is_public %}checked{% endif %}> Show this event and its gallery publicly</label></div>
+      <button class="btn" type="submit">Save event details</button>
+    </form>
+
+    <form method="post" action="/manage/{{ event.id }}/settings/criteria" class="sheet pad" id="rubric" data-weights>
+      {{ m.csrf_field() }}
+      <h2 style="font-size:1.15rem;margin-bottom:6px">Rubric</h2>
+      <p class="muted small">Weights are relative; the percentages show what they add up to. Every judge scores every criterion from {{ criteria[0].min_score if criteria else 1 }} to {{ criteria[0].max_score if criteria else 5 }}. Changing a weight recalculates all results.</p>
+      {% for c in criteria %}
+      <div class="weight-row">
+        <div>
+          <input type="text" name="n_{{ c.id }}" value="{{ c.name }}" aria-label="Criterion name" style="font-weight:650">
+          <input type="text" name="g_{{ c.id }}" value="{{ c.guidance }}" aria-label="Guidance for judges" placeholder="What should judges look for?" style="margin-top:6px;font-size:0.92rem">
+        </div>
+        <label><span class="visually-hidden">Weight for {{ c.name }}</span><input type="number" name="w_{{ c.id }}" value="{{ c.weight }}" min="0.01" step="0.01" data-w></label>
+        <div class="pct num" data-pct>{{ (100 * c.weight / wsum)|round|int }}%</div>
+      </div>
+      {% endfor %}
+      {% if not has_reviews %}
+      <hr class="rule">
+      <span class="field-label">Add a criterion</span>
+      <div class="weight-row" style="border:0;padding-top:0">
+        <div><input type="text" name="new_name" placeholder="Name"><input type="text" name="new_guidance" placeholder="Guidance for judges" style="margin-top:6px"></div>
+        <input type="number" name="new_weight" placeholder="Weight" min="0.01" step="0.01">
+        <div></div>
+      </div>
+      {% else %}
+      <p class="faint small" style="margin-top:10px">Judging has started, so criteria can be renamed and reweighted but not added or removed.</p>
+      {% endif %}
+      <button class="btn" type="submit" style="margin-top:8px">Save rubric</button>
+    </form>
+    {% if not has_reviews and criteria|length > 1 %}
+    <div class="small muted">Remove a criterion:
+      {% for c in criteria %}<form method="post" action="/manage/{{ event.id }}/settings/criteria/{{ c.id }}/delete" style="display:inline" data-confirm="Remove {{ c.name }} from the rubric?">{{ m.csrf_field() }}<button class="linkish" type="submit">{{ c.name }}</button></form>{% if not loop.last %}, {% endif %}{% endfor %}
+    </div>
+    {% endif %}
+  </div>
+
+  <aside class="stack">
+    <section class="sheet pad" id="tracks">
+      <h3 style="margin-bottom:6px">Tracks</h3>
+      <ul class="item-list">
+        {% for t in tracks %}<li><span class="track tc{{ loop.index0 % 8 }}" style="color:var(--ink)">{{ t.name }}</span>
+          <form method="post" action="/manage/{{ event.id }}/settings/tracks/{{ t.id }}/delete" data-confirm="Remove the {{ t.name }} track?">{{ m.csrf_field() }}<button class="linkish small" type="submit">Remove</button></form></li>{% endfor %}
+      </ul>
+      <form method="post" action="/manage/{{ event.id }}/settings/tracks" class="invite-box" style="margin-top:10px">{{ m.csrf_field() }}<input type="text" name="name" placeholder="New track" aria-label="New track name"><button class="btn quiet small" type="submit">Add</button></form>
+    </section>
+    <section class="sheet pad" id="prizes">
+      <h3 style="margin-bottom:6px">Prizes</h3>
+      <ul class="item-list">
+        {% for p in prizes %}<li><span>{{ p.name }} <b class="num">{{ p.reward }}</b></span>
+          <form method="post" action="/manage/{{ event.id }}/settings/prizes/{{ p.id }}/delete">{{ m.csrf_field() }}<button class="linkish small" type="submit">Remove</button></form></li>
+        {% else %}<li class="muted small">No prizes yet.</li>{% endfor %}
+      </ul>
+      <form method="post" action="/manage/{{ event.id }}/settings/prizes" style="margin-top:10px">
+        {{ m.csrf_field() }}
+        <input type="text" name="name" placeholder="Prize name" aria-label="Prize name" style="margin-bottom:6px">
+        <div class="invite-box"><input type="text" name="reward" placeholder="Reward, e.g. $500" aria-label="Reward">
+        <select name="track_id" aria-label="Track"><option value="">Overall</option>{% for t in tracks %}<option value="{{ t.id }}">{{ t.name }}</option>{% endfor %}</select></div>
+        <button class="btn quiet small" type="submit" style="margin-top:6px">Add prize</button>
+      </form>
+    </section>
+    <section class="sheet pad" id="questions">
+      <h3 style="margin-bottom:6px">Questions on the submission form</h3>
+      <ul class="item-list">
+        {% for q in questions %}<li><span>{{ q.prompt }}{% if q.required %} <span class="faint small">required</span>{% endif %}</span>
+          <form method="post" action="/manage/{{ event.id }}/settings/questions/{{ q.id }}/delete">{{ m.csrf_field() }}<button class="linkish small" type="submit">Remove</button></form></li>
+        {% else %}<li class="muted small">Teams only fill in the standard fields.</li>{% endfor %}
+      </ul>
+      <form method="post" action="/manage/{{ event.id }}/settings/questions" style="margin-top:10px">
+        {{ m.csrf_field() }}
+        <input type="text" name="name" placeholder="Ask teams something" aria-label="Question">
+        <div class="actions" style="margin-top:6px"><label class="small"><input type="checkbox" name="required" value="1"> Required</label><button class="btn quiet small" type="submit">Add question</button></div>
+      </form>
+    </section>
+  </aside>
+</div>
+{% endblock %}

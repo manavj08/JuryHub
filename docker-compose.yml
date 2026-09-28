@@ -1,0 +1,18 @@
+# docker compose up  ->  http://localhost:8080, seeded with the DOGFOOD fixtures.
+services:
+  scoreline:
+    build: .
+    image: scoreline:local
+    ports:
+      - "8080:8080"
+    environment:
+      # Fixed demo sessions for the acceptance checker. Set to "0" before a real event.
+      SCORELINE_DEMO_SESSIONS: "1"
+      # Password for every seeded demo account. Change it, or remove the demo accounts.
+      SCORELINE_DEMO_PASSWORD: "dogfood2026"
+    volumes:
+      - scoreline-data:/data
+    restart: unless-stopped
+
+volumes:
+  scoreline-data:

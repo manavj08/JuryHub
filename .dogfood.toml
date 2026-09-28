@@ -1,0 +1,25 @@
+# .dogfood.toml for Scoreline. Run the checker with:
+#   python3 run.py .dogfood.toml > acceptance-report.txt
+
+[portal]
+base_url = "http://localhost:8080"
+
+[tiers]
+claimed = ["T1", "T2"]
+pitch = "A self-hosted hackathon portal whose judging you can audit: weighted rubrics, backend-enforced judge isolation, bias-adjusted rankings with the math shown, and a hash-chained audit trail."
+
+[auth]
+# Fixed demo sessions created by the seed script (SCORELINE_DEMO_SESSIONS=1).
+# Turn them off before running a real event; see README.
+organizer   = "Cookie: session=demo-organizer-7f2a"
+judge_a     = "Cookie: session=demo-judge-a-91bc"
+judge_b     = "Cookie: session=demo-judge-b-44de"
+participant = "Cookie: session=demo-participant-2e88"
+
+[routes]
+gallery      = "/projects"
+submit       = "/api/events/evt_01/submissions"
+judge_scores = "/api/judge/scores"
+# judge_a is fixture judge jdg_24 (Diego Herrera); judge_b asks for their scores.
+peer_scores  = "/api/judge/scores?judge=jdg_24"
+csv_export   = "/api/events/evt_01/export/reviews.csv"

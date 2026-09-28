@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m with context %}
+{% block title %}Gallery | Scoreline{% endblock %}
+{% block content %}
+{% macro qs(over) -%}
+{%- set d = dict(f) -%}{%- for k, v in over.items() -%}{%- set _ = d.update({k: v}) -%}{%- endfor -%}
+?{% for k, v in d.items() if v and k != 'page' %}{{ k }}={{ v|urlencode }}&{% endfor %}{% if over.page %}page={{ over.page }}{% endif %}
+{%- endmacro %}
+<div class="page-head">
+  <div>
+    <h1>{% if current_event %}{{ current_event.name }}{% else %}Project gallery{% endif %}</h1>
+    <p>Every submitted project{% if not current_event %} across all public events{% endif %}. Search by name, team or technology.</p>
+  </div>
+</div>
+<div class="split-l">
+  <aside aria-label="Filters"><details class="filters" open data-collapse-mobile><summary>Filter by event, track or technology</summary>
+    <h3>Event</h3>
+    <ul class="filter-list">
+      <li><a href="{{ qs({'event': '', 'track': ''}) }}" {% if not f.event %}aria-current="true"{% endif %}>All events</a></li>
+      {% for e in events %}<li><a href="{{ qs({'event': e.id, 'track': ''}) }}" {% if f.event == e.id %}aria-current="true"{% endif %}>{{ e.name }}</a></li>{% endfor %}
+    </ul>
+    <h3>Track</h3>
+    <ul class="filter-list">
+      <li><a href="{{ qs({'track': ''}) }}" {% if not f.track %}aria-current="true"{% endif %}>All tracks</a></li>
+    </ul>
+    {% if not current_event %}{% for ev_name, group in tracks|groupby('event_name') %}
+      <h4>{{ ev_name }}</h4>
+      <ul class="filter-list">{% for t in group %}<li><a href="{{ qs({'track': t.id, 'event': t.event_id}) }}" {% if f.track == t.id %}aria-current="true"{% endif %}><span class="track tc{{ track_ix.get(t.id, 7) }}">{{ t.name }}</span></a></li>{% endfor %}</ul>
+    {% endfor %}{% else %}
+      <ul class="filter-list">{% for t in tracks %}<li><a href="{{ qs({'track': t.id, 'event': t.event_id}) }}" {% if f.track == t.id %}aria-current="true"{% endif %}><span class="track tc{{ track_ix.get(t.id, 7) }}">{{ t.name }}</span></a></li>{% endfor %}</ul>
+    {% endif %}
+    {% if tags %}
+    <h3>Technology</h3>
+    <div class="tags">
+      {% for t in tags %}<a class="tag" href="{{ qs({'tag': '' if f.tag == t.tag else t.tag}) }}" {% if f.tag == t.tag %}style="background:var(--ink);color:#fff"{% endif %}>{{ t.tag }}</a>{% endfor %}
+    </div>
+    {% endif %}
+  </details></aside>
+
+  <section>
+    <form class="search-row" method="get" action="/projects" role="search">
+      {% for k in ['event', 'track', 'tag', 'sort'] %}{% if f[k] %}<input type="hidden" name="{{ k }}" value="{{ f[k] }}">{% endif %}{% endfor %}
+      <label class="visually-hidden" for="q">Search projects</label>
+      <input id="q" type="search" name="q" value="{{ f.q }}" placeholder="Search projects, teams, technologies">
+      <button class="btn" type="submit">Search</button>
+    </form>
+    <div class="result-bar">
+      <span class="num">{{ plural(total, 'project') }}{% if f.q %} matching “{{ f.q }}”{% endif %}{% if f.tag %} tagged {{ f.tag }}{% endif %}</span>
+      <form method="get" action="/projects" data-autosubmit>
+        {% for k in ['event', 'track', 'tag', 'q'] %}{% if f[k] %}<input type="hidden" name="{{ k }}" value="{{ f[k] }}">{% endif %}{% endfor %}
+        <label class="small">Sort
+          <select name="sort">
+            {% for k, label in [('title', 'Name, A to Z'), ('newest', 'Newest first'), ('oldest', 'Oldest first')] %}
+            <option value="{{ k }}" {% if f.sort == k %}selected{% endif %}>{{ label }}</option>{% endfor %}
+          </select>
+        </label>
+        <noscript><button class="btn small quiet">Apply</button></noscript>
+      </form>
+    </div>
+
+    {% if rows %}
+    <div class="entries">
+      {% for p in rows %}
+      <a class="entry" href="/projects/{{ p.id }}">
+        {{ m.cover(p, track_ix) }}
+        <h3>{{ p.title }}</h3>
+        <p>{{ p.tagline }}</p>
+        <div class="by"><span>{{ p.team_name }}</span>{{ m.track(p.track_name, track_ix.get(p.track_id, 7)) }}</div>
+      </a>
+      {% endfor %}
+    </div>
+    {% if pages > 1 %}
+    <nav class="pager" aria-label="Pages">
+      {% if page > 1 %}<a class="btn quiet small" href="{{ qs({'page': page - 1}) }}">Previous page</a>{% endif %}
+      <span class="muted small" style="align-self:center">Page {{ page }} of {{ pages }}</span>
+      {% if page < pages %}<a class="btn quiet small" href="{{ qs({'page': page + 1}) }}">Next page</a>{% endif %}
+    </nav>
+    {% endif %}
+    {% else %}
+    <div class="empty">
+      <h2>Nothing matches</h2>
+      <p class="muted">Try a shorter search, or <a href="/projects">clear every filter</a>.</p>
+    </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

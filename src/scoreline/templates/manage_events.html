@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Your events | Scoreline{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Your events</h1><p>Events you organize{% if user.is_admin %}, and every other event because you're an administrator{% endif %}.</p></div>
+  <a class="btn" href="/manage/new">Create an event</a>
+</div>
+<div class="event-list">
+  {% for e in events %}
+  {% set ph = phase_of(e) %}
+  <div class="event-row">
+    <div>
+      <h3><a href="/manage/{{ e.id }}">{{ e.name }}</a></h3>
+      <div class="muted small">{% if ph == 'open' %}Taking submissions until {{ e.submissions_close_at|dt }}{% elif ph == 'upcoming' %}Opens {{ e.submissions_open_at|dt }}{% elif ph == 'judging' %}Judging. Results not published.{% else %}Results published {{ e.results_published_at|date }}{% endif %}{% if not e.is_public %}. Hidden from the public.{% endif %}</div>
+    </div>
+    <a class="btn quiet small" href="/manage/{{ e.id }}">Open console</a>
+  </div>
+  {% else %}
+  <div class="empty"><h2>No events yet</h2><p class="muted">Create one to start taking submissions.</p></div>
+  {% endfor %}
+</div>
+{% if user.is_admin %}
+<div class="sheet pad" style="margin-top:40px;max-width:640px">
+  <h3>Import an event</h3>
+  <p class="muted">Upload a JSON file in the DOGFOOD fixtures shape, or one exported from another Scoreline. It becomes a new event with you as organizer. Duplicate submissions are flagged, not dropped.</p>
+  <form method="post" action="/manage/import" enctype="multipart/form-data" class="actions">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="file" name="file" accept="application/json,.json" required>
+    <button class="btn" type="submit">Import</button>
+  </form>
+</div>
+{% endif %}
+{% endblock %}

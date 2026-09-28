@@ -1,0 +1,5 @@
+# Runtime. Pinned so a fresh clone builds the same thing we tested.
+fastapi==0.141.1
+uvicorn==0.54.0
+jinja2==3.1.6
+python-multipart==0.0.32

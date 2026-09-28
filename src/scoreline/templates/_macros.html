@@ -1,0 +1,44 @@
+{% macro cover(p, track_ix) -%}
+<div class="cover tc{{ track_ix.get(p.track_id, 7) }}">
+  <span aria-hidden="true">{{ p.title|initials }}</span>
+  {% if p.thumbnail %}<img src="{{ p.thumbnail }}" alt="" loading="lazy">{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro track(name, ix) -%}
+{% if name %}<span class="track tc{{ ix }}">{{ name }}</span>{% endif %}
+{%- endmacro %}
+
+{% macro phase_rail(event, phase) -%}
+{% set order = ['upcoming', 'open', 'judging', 'results'] %}
+{% set here = order.index(phase) %}
+<ol class="phase-rail" aria-label="Event stages">
+  {% for key, label in phases %}
+  {% set i = loop.index0 %}
+  <li class="{% if i < here %}done{% elif i == here %}now{% endif %}" {% if i == here %}aria-current="step"{% endif %}>
+    <strong>{{ label }}</strong>
+    <small>
+    {% if key == 'upcoming' %}until {{ event.submissions_open_at|date }}
+    {% elif key == 'open' %}closes {{ event.submissions_close_at|dt }}
+    {% elif key == 'judging' %}{% if event.judging_close_at %}until {{ event.judging_close_at|date }}{% else %}after the deadline{% endif %}
+    {% else %}{% if event.results_published_at %}published {{ event.results_published_at|date }}{% else %}when organizers publish{% endif %}{% endif %}
+    </small>
+  </li>
+  {% endfor %}
+</ol>
+{%- endmacro %}
+
+{% macro console_nav(event, section) -%}
+<div class="crumb"><a href="/manage">Your events</a></div>
+<div class="page-head" style="margin-bottom:18px">
+  <div><h1 style="font-size:2.1rem">{{ event.name }}</h1></div>
+  <div class="actions"><a class="btn quiet small" href="/events/{{ event.id }}">View public page</a></div>
+</div>
+<nav class="console-nav" aria-label="Event console">
+  {% for key, label in [('overview', 'Overview'), ('judges', 'Judges and assignments'), ('results', 'Results'), ('settings', 'Settings'), ('audit', 'Audit trail'), ('data', 'Import and export')] %}
+  <a href="/manage/{{ event.id }}{% if key != 'overview' %}/{{ key }}{% endif %}" {% if section == key %}aria-current="page"{% endif %}>{{ label }}</a>
+  {% endfor %}
+</nav>
+{%- endmacro %}
+
+{% macro csrf_field() -%}<input type="hidden" name="csrf" value="{{ csrf }}">{%- endmacro %}

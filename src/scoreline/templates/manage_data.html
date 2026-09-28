@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m with context %}
+{% block title %}Import and export | {{ event.name }}{% endblock %}
+{% block content %}
+{{ m.console_nav(event, section) }}
+<div class="split">
+  <section class="sheet pad">
+    <h2 style="font-size:1.15rem;margin-bottom:4px">Spreadsheets</h2>
+    <p class="muted small">CSV, one header row, UTF-8. Every download is written to the audit trail.</p>
+    <ul class="item-list">
+      {% for k, label, desc in [
+        ('results', 'Results', 'Rank, raw average, adjusted score and error for every project'),
+        ('reviews', 'Reviews', 'One row per judge per project, with each criterion and the weighted score'),
+        ('projects', 'Projects', 'Every submission including drafts and duplicates'),
+        ('teams', 'Teams', 'One row per team member'),
+        ('judges', 'Judges', 'Tracks, workload and progress'),
+        ('assignments', 'Assignments', 'Who was asked to review what, and how it was assigned'),
+        ('audit', 'Audit trail', 'Every recorded action, with its hash')] %}
+      <li><span><b>{{ label }}</b><br><span class="muted small">{{ desc }}</span></span><a class="btn quiet small" href="/api/events/{{ event.id }}/export/{{ k }}.csv">Download</a></li>
+      {% endfor %}
+    </ul>
+  </section>
+  <aside class="stack">
+    <section class="sheet pad">
+      <h3>Everything, as JSON</h3>
+      <p class="muted small" style="margin-top:6px">The whole event in the DOGFOOD fixtures format. An administrator can import it into any other Scoreline, which is also how you move to a different tool.</p>
+      <a class="btn" href="/api/events/{{ event.id }}/export.json">Download JSON</a>
+    </section>
+    <section class="sheet pad">
+      <h3>API</h3>
+      <p class="muted small" style="margin-top:6px">Every screen here has a JSON equivalent. Authenticate with your session as a Bearer token. The schema is at <a href="/openapi.json">/openapi.json</a>.</p>
+    </section>
+  </aside>
+</div>
+{% endblock %}

@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m with context %}
+{% block title %}Your project | {{ event.name }}{% endblock %}
+{% block content %}
+<div class="crumb"><a href="/events/{{ event.id }}">{{ event.name }}</a> / <a href="/events/{{ event.id }}/team">{{ team.name }}</a></div>
+<div class="page-head">
+  <div>
+    <h1>{% if p %}{{ p.title }}{% else %}Your project{% endif %}</h1>
+    <p>
+      {% if phase == 'open' %}You can edit this until <span class="hl deadline" data-deadline="{{ event.submissions_close_at }}">{{ event.submissions_close_at|dt }}</span><span data-countdown="{{ event.submissions_close_at }}"></span>. After that the form locks, even for drafts.
+      {% else %}Submissions closed {{ event.submissions_close_at|dt }}. This project can no longer be changed.{% endif %}
+    </p>
+  </div>
+  {% if p %}<span class="status {{ p.status }}" style="font-size:0.95rem;padding:6px 12px">{{ 'Submitted' if p.status == 'submitted' else 'Draft, not visible in the gallery' }}</span>{% endif %}
+</div>
+
+{% if errors %}
+<div class="errors" role="alert"><b>Fix these before saving:</b><ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div>
+{% endif %}
+
+{% set locked = phase != 'open' %}
+<form method="post" action="/events/{{ event.id }}/project" enctype="multipart/form-data">
+  {{ m.csrf_field() }}
+  <fieldset {% if locked %}disabled{% endif %} style="border:0;padding:0;margin:0">
+  <div class="split">
+    <div class="sheet pad">
+      <label class="field"><span>Project name</span><input type="text" name="title" maxlength="120" value="{{ values.title or '' }}" required></label>
+      <label class="field"><span>Tagline</span><input type="text" name="tagline" maxlength="160" value="{{ values.tagline or '' }}"><span class="hint">One line. It's what people read in the gallery.</span></label>
+      <label class="field"><span>Description</span><textarea name="description" style="min-height:220px">{{ values.description or '' }}</textarea><span class="hint">What it does, how you built it, what you'd do next. Blank lines start new paragraphs.</span></label>
+      <div class="row2">
+        <label class="field"><span>Repository</span><input type="url" name="repo_url" value="{{ values.repo_url or '' }}" placeholder="https://"></label>
+        <label class="field"><span>Demo video</span><input type="url" name="demo_video_url" value="{{ values.demo_video_url or '' }}" placeholder="https://"></label>
+      </div>
+      <label class="field"><span>Live link <span class="faint" style="font-weight:400">(optional)</span></span><input type="url" name="live_url" value="{{ values.live_url or '' }}" placeholder="https://"></label>
+      {% for q in questions %}
+      <label class="field"><span>{{ q.prompt }}{% if not q.required %} <span class="faint" style="font-weight:400">(optional)</span>{% endif %}</span><textarea name="q_{{ q.id }}" style="min-height:90px">{{ answers.get(q.id, '') }}</textarea></label>
+      {% endfor %}
+    </div>
+
+    <aside class="stack">
+      <div class="sheet pad">
+        <label class="field"><span>Track</span>
+          <select name="track_id">
+            <option value="">Choose a track</option>
+            {% for t in tracks %}<option value="{{ t.id }}" {% if values.track_id == t.id %}selected{% endif %}>{{ t.name }}</option>{% endfor %}
+          </select>
+        </label>
+        <label class="field" style="margin-bottom:0"><span>Technologies</span><input type="text" name="tags" value="{{ tags }}" placeholder="python, sqlite, htmx"><span class="hint">Comma separated. People can filter the gallery by these.</span></label>
+      </div>
+      <div class="sheet pad">
+        <span class="field-label">Thumbnail</span>
+        {% if p and p.thumbnail %}<img src="{{ p.thumbnail }}" alt="Current thumbnail" style="border-radius:4px;margin-bottom:10px;aspect-ratio:4/3;object-fit:cover">{% endif %}
+        <input type="file" name="thumbnail" accept="image/png,image/jpeg,image/webp,image/gif">
+        <span class="hint">16:10 works best. Under 3 MB.</span>
+        <hr class="rule">
+        <span class="field-label">Screenshots</span>
+        {% if images %}<div class="shots" style="grid-template-columns:1fr 1fr;margin-bottom:10px">{% for i in images %}<img src="{{ i.path }}" alt="">{% endfor %}</div>{% endif %}
+        <input type="file" name="images" multiple accept="image/png,image/jpeg,image/webp,image/gif">
+        <span class="hint">Up to 6 in total.</span>
+      </div>
+      {% if not locked %}
+      <div class="sheet pad">
+        <div class="actions" style="flex-direction:column;align-items:stretch">
+          {% if not p or p.status != 'submitted' %}
+          <button class="btn" type="submit" name="action" value="submit">Submit project</button>
+          <button class="btn ghost" type="submit" name="action" value="draft" formnovalidate>Save draft</button>
+          {% else %}
+          <button class="btn" type="submit" name="action" value="submit">Save changes</button>
+          <button class="btn quiet" type="submit" name="action" value="unsubmit" formnovalidate>Move back to draft</button>
+          {% endif %}
+        </div>
+        <p class="faint small" style="margin:12px 0 0">Submitting puts it in the public gallery. You can keep editing until the deadline.</p>
+      </div>
+      {% endif %}
+    </aside>
+  </div>
+  </fieldset>
+</form>
+{% endblock %}

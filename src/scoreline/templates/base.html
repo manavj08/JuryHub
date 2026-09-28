@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Scoreline{% endblock %}</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="/static/fonts/schibsted-grotesk-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+{% set path = request.url.path %}
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="/" aria-label="Scoreline home">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><text x="16" y="22.5" text-anchor="middle" font-family="Schibsted Grotesk, sans-serif" font-weight="850" font-size="17" fill="#1b2845">5</text><path d="M17 3.5c8.2.3 12.6 6 11.8 12.9-.8 7.3-7 11.8-13.6 11.4C8 27.4 3.2 21.9 3.6 15.4 4 8.8 9.4 4 16.5 4.3 21 4.6 24 6.8 25.4 9" fill="none" stroke="#1b2845" stroke-width="2" stroke-linecap="round"/></svg>
+      Scoreline
+    </a>
+    <nav class="nav" aria-label="Main">
+      <a href="/projects" {% if path.startswith('/projects') %}aria-current="page"{% endif %}>Gallery</a>
+      <a href="/" {% if path == '/' or path.startswith('/events') %}aria-current="page"{% endif %}>Events</a>
+      {% if nav.judge %}<a href="/judge" {% if path.startswith('/judge') %}aria-current="page"{% endif %}>Judging</a>{% endif %}
+      {% if nav.organizer %}<a href="/manage" {% if path.startswith('/manage') %}aria-current="page"{% endif %}>Organize</a>{% endif %}
+      {% if user and user.is_admin %}<a href="/manage/-/admin" {% if path.startswith('/manage/-/admin') %}aria-current="page"{% endif %}>Admin</a>{% endif %}
+    </nav>
+    <div class="who">
+      {% if user %}
+        <span>{{ user.name }}</span>
+        <form method="post" action="/logout"><button class="linkish" type="submit">Sign out</button></form>
+      {% else %}
+        <a href="/login?next={{ path|urlencode }}">Sign in</a>
+        <a class="btn small" href="/signup">Create account</a>
+      {% endif %}
+    </div>
+  </div>
+</header>
+{% if flash %}<div class="flash" role="status"><div class="wrap">{{ flash }}</div></div>{% endif %}
+<main>
+  <div class="wrap">
+  {% block content %}{% endblock %}
+  </div>
+</main>
+<footer class="foot">
+  <div class="wrap">Scoreline is open source under the MIT license. Runs on your own machine; nothing here calls out to the internet. <a href="/openapi.json">API schema</a></div>
+</footer>
+<script src="/static/js/app.js" defer></script>
+</body>
+</html>

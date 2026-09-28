@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m with context %}
+{% block title %}Results | {{ event.name }}{% endblock %}
+{% block content %}
+{{ m.console_nav(event, section) }}
+{% set rows = table.project_rows %}
+{% set names = table.judge_rows %}
+{% set moved = table.projects|rejectattr('movement', 'equalto', 0)|list %}
+<div class="page-head" style="margin-bottom:22px">
+  <div>
+    <h2>{% if event.results_published_at %}Published {{ event.results_published_at|dt }}{% else %}Draft ranking, visible to organizers only{% endif %}</h2>
+    <p>{{ table.reviews }} finished reviews of {{ table.projects|length }} projects. After adjusting for judge generosity, <span class="hl">{{ plural(moved|length, 'project') }} changed rank</span>. The method is written up in JUDGING.md in the repository.</p>
+  </div>
+  <div class="actions">
+    <a class="btn quiet small" href="/api/events/{{ event.id }}/export/results.csv">Download CSV</a>
+    {% if event.results_published_at %}
+    <form method="post" action="/manage/{{ event.id }}/results/unpublish" data-confirm="Hide results from the public and unlock scores?">{{ m.csrf_field() }}<button class="btn ghost" type="submit">Unpublish</button></form>
+    {% elif phase in ['judging'] %}
+    <form method="post" action="/manage/{{ event.id }}/results/publish" data-confirm="Publish results? Everyone will see the ranking and judges' scores will lock.">{{ m.csrf_field() }}<button class="btn" type="submit">Publish results</button></form>
+    {% else %}
+    <button class="btn" disabled title="Submissions are still open">Publish results</button>
+    {% endif %}
+  </div>
+</div>
+
+{% if dups %}
+<section class="sheet pad" id="duplicates" style="margin-bottom:24px;border-color:var(--red)">
+  <h3 style="margin-bottom:6px">Possible duplicate submissions</h3>
+  <p class="muted small">Same team and the same title or repository. The later copy is kept out of the gallery and the ranking. Its reviews are stored but not counted.</p>
+  {% for d in dups %}
+  <div style="display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center;padding:12px 0;border-top:1px solid var(--rule-soft)">
+    <div>
+      <b>{{ d.team_name }}</b> submitted <a href="/projects/{{ d.duplicate_of }}">{{ d.orig_title }}</a> ({{ d.duplicate_of }}, {{ d.orig_submitted_at|dt }})
+      and again as <a href="/projects/{{ d.id }}">{{ d.title }}</a> ({{ d.id }}, {{ d.submitted_at|dt }}).
+    </div>
+    <div class="actions">
+      <form method="post" action="/manage/{{ event.id }}/duplicates/{{ d.id }}">{{ m.csrf_field() }}<input type="hidden" name="keep" value="original"><button class="btn quiet small" type="submit">Keep {{ d.duplicate_of }}</button></form>
+      <form method="post" action="/manage/{{ event.id }}/duplicates/{{ d.id }}">{{ m.csrf_field() }}<input type="hidden" name="keep" value="newer"><button class="btn quiet small" type="submit">Keep {{ d.id }} instead</button></form>
+    </div>
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+
+{% set maxb = [table.judges|map(attribute='bias')|map('abs')|max if table.judges else 0, 0.25]|max %}
+<section class="sheet pad" style="margin-bottom:28px">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap">
+    <h3>How generous each judge was</h3>
+    <span class="faint small">Each dot is a judge. Red dots gave every project the same score.</span>
+  </div>
+  <div class="bias" style="height:64px" aria-hidden="true">
+    {% for j in table.judges %}<i class="{% if 'identical' in j.flags|join %}flag{% endif %}" style="left:{{ 50 + 46 * j.bias / maxb }}%;bottom:{{ 8 + (loop.index0 % 3) * 14 }}px" title="{{ names[j.judge_id].name }}: {{ '%+.2f'|format(j.bias) }}"></i>{% endfor %}
+  </div>
+  <div class="bias-scale"><span>Harsher by {{ '%.2f'|format(maxb) }}</span><span>Average judge</span><span>More generous by {{ '%.2f'|format(maxb) }}</span></div>
+</section>
+
+<section style="margin-bottom:36px">
+  <div class="table-wrap">
+  <table class="data">
+    <thead><tr><th>Rank</th><th>Change</th><th>Project</th><th>Track</th><th class="r">Reviews</th><th class="r">Raw average</th><th class="r">Adjusted score</th></tr></thead>
+    <tbody>
+    {% for r in table.projects %}
+    <tr>
+      <td class="rank num">{{ r.rank }}</td>
+      <td>{% if r.movement > 0 %}<span class="move up" title="Was {{ r.raw_rank }} before adjustment">up {{ r.movement }}</span>{% elif r.movement < 0 %}<span class="move down" title="Was {{ r.raw_rank }} before adjustment">down {{ -r.movement }}</span>{% else %}<span class="move same">same</span>{% endif %}</td>
+      <td><a href="/projects/{{ r.project_id }}">{{ rows[r.project_id].title }}</a> <span class="faint small">{{ rows[r.project_id].team_name }}</span></td>
+      <td>{{ m.track(rows[r.project_id].track_name, track_ix.get(rows[r.project_id].track_id, 7)) }} <span class="faint small num">{{ table.track_rank[r.project_id] }}</span></td>
+      <td class="r num {% if r.n < event.reviews_per_project %}deadline soon{% endif %}">{{ r.n }}</td>
+      <td class="r num muted">{{ '%.2f'|format(r.raw_mean) }}</td>
+      <td class="r num"><b>{{ '%.2f'|format(r.normalized) }}</b> <span class="faint small">&plusmn;{{ '%.2f'|format(r.stderr) }}</span></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <p class="faint small" style="margin-top:10px">Red review counts are below the target of {{ event.reviews_per_project }}. The &plusmn; figure is one standard error: two projects whose ranges overlap are close to a coin toss.</p>
+</section>
+
+<section class="sheet pad">
+  <h3 style="margin-bottom:8px">Judges, most unusual first</h3>
+  <div class="table-wrap">
+  <table class="data">
+    <thead><tr><th>Judge</th><th class="r">Reviews</th><th class="r">Average given</th><th class="r">Spread</th><th class="r">Adjustment</th><th>Note</th></tr></thead>
+    <tbody>
+    {% for j in table.judges %}
+    <tr>
+      <td>{{ names[j.judge_id].name }}</td>
+      <td class="r num">{{ j.n }}</td>
+      <td class="r num">{{ '%.2f'|format(j.mean_given) }}</td>
+      <td class="r num {% if 'identical' in j.flags|join %}deadline soon{% endif %}">{{ '%.2f'|format(j.spread) }}</td>
+      <td class="r num"><b>{{ '%+.2f'|format(-j.bias) }}</b></td>
+      <td class="small">{% for f in j.flags %}<span class="{% if 'identical' in f %}deadline soon{% else %}muted{% endif %}">{{ f|capitalize }}</span>{% if not loop.last %}; {% endif %}{% endfor %}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <p class="faint small" style="margin-top:12px">Adjustment is what the model adds to that judge's scores to bring them to an average judge's scale. Shrinkage is {{ event.bias_shrinkage }}: a judge's estimate behaves as if they had also reviewed {{ event.bias_shrinkage|round|int }} average projects, so one or two reviews cannot make someone look harsh or generous. Change it in Settings.</p>
+</section>
+{% endblock %}

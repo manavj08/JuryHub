@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m with context %}
+{% block content %}
+{% if featured %}
+{% set ph = phase_of(featured) %}
+{% set c = counts[featured.id] %}
+<section class="hero">
+  <h1>{{ featured.name }}</h1>
+  <p class="lede">{{ featured.tagline or featured.description }}</p>
+  <div class="actions">
+    {% if ph == 'open' %}
+      <a class="btn" href="/events/{{ featured.id }}">Enter a project</a>
+      <a class="btn ghost" href="/projects?event={{ featured.id }}">See what's been submitted</a>
+    {% elif ph == 'results' %}
+      <a class="btn" href="/events/{{ featured.id }}/results">See the results</a>
+      <a class="btn ghost" href="/projects?event={{ featured.id }}">Browse the projects</a>
+    {% else %}
+      <a class="btn" href="/projects?event={{ featured.id }}">Browse the projects</a>
+      <a class="btn ghost" href="/events/{{ featured.id }}">About this event</a>
+    {% endif %}
+  </div>
+  {{ m.phase_rail(featured, ph) }}
+  {% if strip %}
+  <p class="muted" style="margin:34px 0 0">{{ plural(c.projects, 'project') }} from {{ plural(c.teams, 'team') }} across {{ plural(c.tracks, 'track') }}. The latest:</p>
+  <div class="hero-strip" style="margin-top:14px">
+    {% for p in strip %}<a href="/projects/{{ p.id }}">{{ m.cover(p, track_ix) }}<span class="t">{{ p.title }}</span></a>{% endfor %}
+  </div>
+  {% endif %}
+</section>
+{% endif %}
+
+{% if events|length > 1 or not featured %}
+<section style="margin-top:44px">
+  <h2 style="margin-bottom:14px">All events</h2>
+  {% if not events %}
+  <div class="empty"><h2>No events yet</h2><p class="muted">An organizer creates the first one from the Organize page.</p></div>
+  {% endif %}
+  <div class="event-list">
+    {% for e in events %}
+    {% set ph = phase_of(e) %}
+    <div class="event-row">
+      <div>
+        <h3><a href="/events/{{ e.id }}">{{ e.name }}</a></h3>
+        <div class="muted small">
+          {% if ph == 'open' %}<span class="deadline">Submissions close {{ e.submissions_close_at|dt }}</span>
+          {% elif ph == 'upcoming' %}Submissions open {{ e.submissions_open_at|dt }}
+          {% elif ph == 'judging' %}Closed {{ e.submissions_close_at|date }}, judging in progress
+          {% else %}Results published {{ e.results_published_at|date }}{% endif %}
+        </div>
+      </div>
+      <div class="muted small num">{{ plural(counts[e.id].projects, 'project') }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+{% endblock %}

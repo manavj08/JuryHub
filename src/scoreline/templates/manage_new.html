@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Create an event | Scoreline{% endblock %}
+{% block content %}
+<div class="crumb"><a href="/manage">Your events</a></div>
+<div style="max-width:640px">
+  <h1 style="margin-bottom:10px">Create an event</h1>
+  <p class="muted" style="margin-bottom:24px">You can change all of this later, and add prizes and custom questions on the next screen. Times are in UTC.</p>
+  {% if errors %}<div class="errors" role="alert"><ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div>{% endif %}
+  <form method="post" class="sheet pad">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label class="field"><span>Name</span><input type="text" name="name" value="{{ values.name }}" required autofocus></label>
+    <label class="field"><span>Tagline</span><input type="text" name="tagline" value="{{ values.tagline }}"><span class="hint">One sentence for the event page.</span></label>
+    <div class="row2">
+      <label class="field"><span>Submissions open (UTC)</span><input type="datetime-local" name="opens" value="{{ values.opens }}" required></label>
+      <label class="field"><span>Submissions close (UTC)</span><input type="datetime-local" name="closes" value="{{ values.closes }}" required></label>
+    </div>
+    <label class="field"><span>Tracks</span><textarea name="tracks" style="min-height:110px" placeholder="One per line">{{ values.tracks }}</textarea><span class="hint">Leave empty for a single general track.</span></label>
+    <button class="btn" type="submit">Create event</button>
+  </form>
+</div>
+{% endblock %}
